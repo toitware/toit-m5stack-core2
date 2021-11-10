@@ -326,7 +326,6 @@ class Power:
 
   power_flag_ bit/int -> bool:
     reg0 := device.registers.read_bytes POWER_STATUS_REGISTER 1
-    print "Power status 0x$(%02x reg0[0])"
     return reg0[0] & bit != 0
 
   set_defaults -> none:
@@ -367,9 +366,3 @@ class Power:
     led_reset 1
 
     bus_power_mode --usb_or_battery
-
-    vibrator --on
-    print "Vibrator on"
-    sleep --ms=2000
-    vibrator --off
-    print "Vibrator off"

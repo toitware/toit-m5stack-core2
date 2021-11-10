@@ -1,8 +1,23 @@
-# AXP192
+# M5Stack Core2
 
-Constants and helper functions for driving the AXP192
-power control chip.  The chip has an I2C interface and
-typically uses the ID 0x36.
+Useful functions for the M5Stack Core2.  Most of the
+functionality relates to the AXP192 power control chip
+that also controls the LCD backlight and reset lines,
+and the green LED.
 
-See the m5stack-core2 package for an example of how this
-package is used.
+## Example
+
+```
+import gpio
+import m5stack_core2
+
+main:
+  clock := gpio.Pin 22
+  data := gpio.Pin 21
+
+  // Create the power object and initialize the power config
+  // to its default values.  Resets the LCD display and switches
+  // on the LCD backlight and the green power LED.
+  power := m5stack_core2.Power --clock=clock --data=data
+```
+

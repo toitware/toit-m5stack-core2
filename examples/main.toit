@@ -9,6 +9,9 @@ main:
   clock := gpio.Pin 22
   data := gpio.Pin 21
 
+  // Create the power object and initialize the power config
+  // to its default values.  Resets the LCD display and switches
+  // on the LCD backlight and the green power LED.
   power := m5stack_core2.Power --clock=clock --data=data
 
   if power.external_power_acin_exists:

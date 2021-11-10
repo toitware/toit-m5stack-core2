@@ -9,6 +9,11 @@ import axp192 show *
 class Power:
   device /i2c.Device
 
+  /**
+  Creates the power object and initializes the power config
+    to its default values.  Resets the LCD display and switches
+    on the LCD backlight and the green power LED.
+  */
   constructor --clock/gpio.Pin --data/gpio.Pin:
     bus := i2c.Bus --scl=clock --sda=data --frequency=400_000
 
@@ -19,61 +24,55 @@ class Power:
 
     set_defaults
 
-  /// Set voltage to ESP32.  Should be between 3V and 3.4V.
+  /// Sets voltage to the ESP32.
+  /// Should be between 3V and 3.4V.
   esp32_voltage mv/int -> none:
     if not 3000 <= mv <= 3400: throw "OUT_OF_RANGE"
     set_bits device DC_DC1_VOLTAGE_SETTING_REGISTER --mask=DC_DC_VOLTAGE_SETTING_MASK
       dc_dc_millivolt_to_register mv
 
-  /// Set voltage to LCD backlight.  Should be between 2.5V and 3.3V
+  /// Sets voltage to the LCD backlight.
+  /// Should be between 2.5V and 3.3V
   backlight_voltage mv/int -> none:
     set_bits device DC_DC3_VOLTAGE_SETTING_REGISTER --mask=DC_DC_VOLTAGE_SETTING_MASK
       dc_dc_millivolt_to_register mv
 
-  /// Set peripheral voltage: LCD logic and SD card.
+  /// Sets the peripheral voltage: LCD logic and SD card.
   peripheral_voltage mv/int -> none:
     set_bits device LDO2_3_VOLTAGE_SETTING_REGISTER --mask=LDO2_VOLTAGE_MASK
       ldo2_millivolt_to_register mv
 
-  /// Set vibrator power voltage.
+  /// Sets the vibrator power voltage.
   vibrator_voltage mv/int -> none:
     set_bits device LDO2_3_VOLTAGE_SETTING_REGISTER --mask=LDO3_VOLTAGE_MASK
       ldo3_millivolt_to_register mv
 
-  /// Enable charging of backup battery at given target millivolts and
-  ///   microamperes.
+  /// Enables charging of the backup battery at the given target millivolts and microamperes.
   backup_battery_charging --disable/bool=false --mv/int=3000 --ua/int=200 -> none:
     backup_mask := BACKUP_BATTERY_CHARGING_ENABLED
                  | BACKUP_BATTERY_CHARGING_TARGET_VOLTAGE_MASK
                  | BACKUP_BATTERY_CHARGING_CURRENT_MASK
     backup_value := disable ? BACKUP_BATTERY_CHARGING_DISABLED : BACKUP_BATTERY_CHARGING_ENABLED
-    if mv == 2500:
-      backup_value |= BACKUP_BATTERY_CHARGING_TARGET_2_5
-    else if mv == 3000:
-      backup_value |= BACKUP_BATTERY_CHARGING_TARGET_3_0
-    else if mv == 3100:
-      backup_value |= BACKUP_BATTERY_CHARGING_TARGET_3_1
-    else:
-      throw "Invalid voltage"
-    if ua == 50:
-      backup_value |= BACKUP_BATTERY_CHARGING_CURRENT_50
-    else if ua == 100:
-      backup_value |= BACKUP_BATTERY_CHARGING_CURRENT_100
-    else if ua == 200:
-      backup_value |= BACKUP_BATTERY_CHARGING_CURRENT_200
-    else if ua == 400:
-      backup_value |= BACKUP_BATTERY_CHARGING_CURRENT_400
-    else:
-      throw "Invalid current"
+    if mv == 2500:      backup_value |= BACKUP_BATTERY_CHARGING_TARGET_2_5
+    else if mv == 3000: backup_value |= BACKUP_BATTERY_CHARGING_TARGET_3_0
+    else if mv == 3100: backup_value |= BACKUP_BATTERY_CHARGING_TARGET_3_1
+    else: throw "Invalid voltage"
+    if ua == 50:       backup_value |= BACKUP_BATTERY_CHARGING_CURRENT_50
+    else if ua == 100: backup_value |= BACKUP_BATTERY_CHARGING_CURRENT_100
+    else if ua == 200: backup_value |= BACKUP_BATTERY_CHARGING_CURRENT_200
+    else if ua == 400: backup_value |= BACKUP_BATTERY_CHARGING_CURRENT_400
+    else: throw "Invalid current"
     set_bits device BACKUP_BATTERY_CHARGE_CONTROL_REGISTER backup_value --mask=backup_mask
 
 
-  /// Enable internal charging at given target millivolts and
-  ///   milliamperes.  Charging ends when the current falls to
-  ///   10% or 15% of the target milliamperes.  If neither is
-  ///   specified the setting is not changed (it defaults to 10%).
-  /// $ma should be between 100mA and 1320mA, default is 780mA.
-  /// $target_mv should be 4100mV, 4150mV, 4200mV, or 4360mV, default is 4200mV.
+  /**
+  Enables internal charging at the given target millivolts and
+    milliamperes.  Charging ends when the current falls to
+    10% or 15% of the target milliamperes.  If neither is
+    specified the setting is not changed (it defaults to 10%).
+  $ma should be between 100mA and 1320mA, default is 780mA.
+  $target_mv should be 4100mV, 4150mV, 4200mV, or 4360mV, default is 4200mV.
+  */
   battery_internal_charging --on/bool=true --off/bool=(not on) --target_mv/int=4200 --ma/int=780 --end_charging_at_10_percent/bool=false --end_charging_at_15_percent/bool=false:
     set_end := end_charging_at_10_percent or end_charging_at_15_percent
     mask := CHARGE_INTERNAL_ENABLE_MASK
@@ -90,57 +89,72 @@ class Power:
     value |= charge_internal_target_millivolts_to_register target_mv
     set_bits device CHARGE_CONTROL_REGISTER_1 value --mask=mask
 
-  /// Set GPIO 0 to either floating or grounded.
+  /// Sets GPIO 0 to either floating or grounded.
   gpio0 --floating=true --grounded=(not floating) -> none:
+    assert: not floating and grounded
     if grounded:
       clear_bits device GPIO_2_0_SIGNAL_STATUS_REGISTER GPIO_0_WRITE_OUTPUT
     else:
       set_bits device GPIO_2_0_SIGNAL_STATUS_REGISTER GPIO_0_WRITE_OUTPUT
 
-  /// LED is switched on by pulling down the cathode with GPIO 1.
+  /// Turns the LED on or off.
+  /// The LED is switched on by pulling down the cathode with GPIO 1.
   led --on/bool=true --off/bool=(not on) -> none:
+    assert: not on and off
     if off:
       set_bits device GPIO_2_0_SIGNAL_STATUS_REGISTER GPIO_1_WRITE_OUTPUT
     else:
       clear_bits device GPIO_2_0_SIGNAL_STATUS_REGISTER GPIO_1_WRITE_OUTPUT
 
-  /// LCD reset line is attached to GPIO4.  Set to 0 (pulled low) or 1 (floating with pull-up).
+  /// Control the LCD reset line.
+  /// The LCD reset line is attached to GPIO4.
+  /// If $value is 0, pulls it low.
+  /// If $value is 1, sets the pin to floating with a pull-up.
   lcd_reset value/int -> none:
     if value == 1:
       set_bits device GPIO_4_3_SIGNAL_STATUS_REGISTER GPIO_4_WRITE_OUTPUT
     else:
+      assert: value == 0
       clear_bits device GPIO_4_3_SIGNAL_STATUS_REGISTER GPIO_4_WRITE_OUTPUT
 
-  /// Speaker is switched on by floating GPIO 2 and letting the pull-up do its
+  /// Switches the speaker on or off.
+  /// The speaker is switched on by floating GPIO 2 and letting the pull-up do its
   ///   job.
   speaker --on/bool=true --off/bool=(not on) -> none:
+    assert: not on and off
     if off:
       clear_bits device GPIO_2_0_SIGNAL_STATUS_REGISTER GPIO_2_WRITE_OUTPUT
     else:
       set_bits device GPIO_2_0_SIGNAL_STATUS_REGISTER GPIO_2_WRITE_OUTPUT
 
-  // Switch power on peripherals.
+  // Switches power on the peripherals.
   peripherals --on/bool=true --off/bool=(not on) -> none:
+    assert: not on and off
     power_ POWER_OUTPUT_LDO2 off
 
-  // Switch power on vibrator.
+  // Switches power on the vibrator.
   vibrator --on/bool=true --off/bool=(not on) -> none:
+    assert: not on and off
     power_ POWER_OUTPUT_LDO3 off
 
-  // Switch power on DC1.
+  // Switches power on DC1.
   dc_dc1 --on/bool=true --off/bool=(not on) -> none:
+    assert: not on and off
     power_ POWER_OUTPUT_DC_DC1 off
 
-  // Switch power on DC2.
+  // Switches power on DC2.
   dc_dc2 --on/bool=true --off/bool=(not on) -> none:
+    assert: not on and off
     power_ POWER_OUTPUT_DC_DC2 off
 
-  // Switch power on LCD backlight.
+  // Switches power on the LCD backlight.
   backlight --on/bool=true --off/bool=(not on) -> none:
+    assert: not on and off
     power_ POWER_OUTPUT_DC_DC3 off
 
-  // Switch on 5V boost chip.
+  // Switches on the 5V boost chip.
   boost_enable --on/bool=true --off/bool=(not on) -> none:
+    assert: not on and off
     power_ POWER_OUTPUT_EXTEN off
 
   power_ pin/int off/bool -> none:
@@ -149,28 +163,39 @@ class Power:
     else:
       set_bits device POWER_OUTPUT_CONTROL_REGISTER pin
 
-  /// Pick one of the functions for GPIO4.
-  gpio_4 --on/bool=false --off/bool=(not on) --external_charging_control/bool=false --nmos_open_drain_output/bool=false --universal_input/bool=false -> none:
+  /// Picks one of the functions for GPIO4.
+  gpio_4 -> none
+      --on/bool=false
+      --off/bool=(not on)
+      --external_charging_control/bool=false
+      --nmos_open_drain_output/bool=false
+      --universal_input/bool=false:
     check := external_charging_control ? 1 : 0
     check += nmos_open_drain_output ? 1 : 0
     check += universal_input ? 1 : 0
     if check != 1: throw "Specify exactly one GPIO function"
     mask := GPIO_4_3_FEATURES_MASK | GPIO_4_FUNCTION_MASK
-    value := GPIO_4_3_FEATURES_ENABLE
+    value := off ? GPIO_4_3_FEATURES_DISABLE : GPIO_4_3_FEATURES_ENABLE
     value |= external_charging_control ? GPIO_4_EXTERNAL_CHARGING_CONTROL : 0
     value |= nmos_open_drain_output ? GPIO_4_NMOS_OPEN_DRAIN_OUTPUT : 0
     value |= universal_input ? GPIO_4_UNIVERSAL_INPUT_PORT : 0
     set_bits device GPIO_4_3_FUNCTION_CONTROL_REGISTER value --mask=mask
 
-  /// Pick one of the functions for GPIO3.
-  gpio_3 --on/bool=false --off/bool=(not on) --external_charging_control/bool=false --nmos_open_drain_output/bool=false --universal_input/bool=false --adc_input/bool=false -> none:
+  /// Picks one of the functions for GPIO3.
+  gpio_3 -> none
+      --on/bool=false
+      --off/bool=(not on)
+      --external_charging_control/bool=false
+      --nmos_open_drain_output/bool=false
+      --universal_input/bool=false
+      --adc_input/bool=false:
     check := external_charging_control ? 1 : 0
     check += nmos_open_drain_output ? 1 : 0
     check += universal_input ? 1 : 0
     check += adc_input ? 1 : 0
     if check != 1: throw "Specify exactly one GPIO function"
     mask := GPIO_4_3_FEATURES_MASK | GPIO_3_FUNCTION_MASK
-    value := GPIO_4_3_FEATURES_ENABLE
+    value := off ? GPIO_4_3_FEATURES_DISABLE : GPIO_4_3_FEATURES_ENABLE
     value |= external_charging_control ? GPIO_3_EXTERNAL_CHARGING_CONTROL : 0
     value |= nmos_open_drain_output ? GPIO_3_NMOS_OPEN_DRAIN_OUTPUT : 0
     value |= universal_input ? GPIO_3_UNIVERSAL_INPUT_PORT : 0
@@ -178,54 +203,44 @@ class Power:
     set_bits device GPIO_4_3_FUNCTION_CONTROL_REGISTER value --mask=mask
 
   /**
-  Set parameters related to reboot.
+  Sets parameters related to reboot.
   $boot_time_ms must be 128ms, 512ms, 1000ms or 2000ms.  Hardware default is 512ms.
   $long_press_time_ms must be 1000ms, 1500ms, 2000ms, or 2500ms.  Hardware default is 1500ms.
   $long_press_shutdown is true for shutdown, false for startup.
   $pwrok_signal_delay_ms must be 32ms, or 64ms.  Hardware default is 64ms.
-  4shutdown_duration_s must be 4s, 6s, 8s, or 10s.  Hardware default is 6s.
+  $shutdown_duration_s must be 4s, 6s, 8s, or 10s.  Hardware default is 6s.
   */
-  pek_parameter --boot_time_ms/int?=null --long_press_time_ms/int?=null --long_press_shutdown/bool?=null --pwrok_signal_delay_ms/int?=null --shutdown_duration_s/int?=null -> none:
+  pek_parameter -> none
+      --boot_time_ms/int?=null
+      --long_press_time_ms/int?=null
+      --long_press_shutdown/bool?=null
+      --pwrok_signal_delay_ms/int?=null
+      --shutdown_duration_s/int?=null:
     value := 0
     mask := 0
     if boot_time_ms:
       mask = BOOT_TIME_MASK
-      if boot_time_ms == 128:
-        value = BOOT_TIME_128_MS
-      else if boot_time_ms == 512:
-        value = BOOT_TIME_512_MS
-      else if boot_time_ms == 1000:
-        value = BOOT_TIME_1000_MS
-      else if boot_time_ms == 2000:
-        value = BOOT_TIME_2000_MS
-      else:
-        throw "Boot time must be 128ms, 512ms, 1000ms, or 2000ms."
+      if boot_time_ms == 128:       value = BOOT_TIME_128_MS
+      else if boot_time_ms == 512:  value = BOOT_TIME_512_MS
+      else if boot_time_ms == 1000: value = BOOT_TIME_1000_MS
+      else if boot_time_ms == 2000: value = BOOT_TIME_2000_MS
+      else: throw "Boot time must be 128ms, 512ms, 1000ms, or 2000ms."
     if long_press_time_ms:
       mask |= LONG_PRESS_TIME_MASK
-      if long_press_time_ms == 1000:
-        value |= LONG_PRESS_TIME_1000_MS
-      else if long_press_time_ms == 1500:
-        value |= LONG_PRESS_TIME_1500_MS
-      else if long_press_time_ms == 2000:
-        value |= LONG_PRESS_TIME_2000_MS
-      else if long_press_time_ms == 2500:
-        value |= LONG_PRESS_TIME_2500_MS
-      else:
-        throw "Long press time must be 1000ms, 1500ms, 2000ms, or 2500ms"
+      if long_press_time_ms == 1000:      value |= LONG_PRESS_TIME_1000_MS
+      else if long_press_time_ms == 1500: value |= LONG_PRESS_TIME_1500_MS
+      else if long_press_time_ms == 2000: value |= LONG_PRESS_TIME_2000_MS
+      else if long_press_time_ms == 2500: value |= LONG_PRESS_TIME_2500_MS
+      else: throw "Long press time must be 1000ms, 1500ms, 2000ms, or 2500ms"
     if long_press_shutdown != null:
       mask |= LONG_PRESS_FUNCTION_MASK
-      if long_press_shutdown:
-        value |= LONG_PRESS_AUTOMATIC_SHUTDOWN
-      else:
-        value |= LONG_PRESS_TURN_ON
+      if long_press_shutdown: value |= LONG_PRESS_AUTOMATIC_SHUTDOWN
+      else:                   value |= LONG_PRESS_TURN_ON
     if pwrok_signal_delay_ms != null:
       mask |= PWROK_SIGNAL_DELAY_MASK
-      if pwrok_signal_delay_ms == 32:
-        value |= PWROK_SIGNAL_32
-      else if pwrok_signal_delay_ms == 64:
-        value |= PWROK_SIGNAL_64
-      else:
-        throw "PWROK signal delay must be 32ms or 64ms"
+      if pwrok_signal_delay_ms == 32:      value |= PWROK_SIGNAL_32
+      else if pwrok_signal_delay_ms == 64: value |= PWROK_SIGNAL_64
+      else: throw "PWROK signal delay must be 32ms or 64ms"
     if shutdown_duration_s != null:
       if shutdown_duration_s & 1 != 0 or not 4 <= shutdown_duration_s <= 10:
         throw "Shutdown duration must be 4s, 6s, 8s, or 10s"
@@ -234,56 +249,69 @@ class Power:
 
     set_bits device PEK_PARAMETER_SETTING_REGISTER value --mask=mask
 
-  /// Enable/disable battery voltage ADC.
+  /// Enables/disables battery voltage ADC.
   adc_battery_voltage --enable/bool=false --disable/bool=(not enable) -> none:
+    assert: not enable and disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_1 ADC_ENABLE_BATTERY_VOLTAGE (not disable)
 
-  /// Enable/disable battery current ADC.
+  /// Enables/disables battery current ADC.
   adc_battery_current --enable/bool=false --disable/bool=(not enable) -> none:
+    assert: not enable and disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_1 ADC_ENABLE_BATTERY_CURRENT (not disable)
 
   /// Enable/disable ACIN voltage ADC.
   adc_acin_voltage --enable/bool=false --disable/bool=(not enable) -> none:
+    assert: not enable and disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_1 ADC_ENABLE_ACIN_VOLTAGE (not disable)
 
   /// Enable/disable ACIN current ADC.
   adc_acin_current --enable/bool=false --disable/bool=(not enable) -> none:
+    assert: not enable and disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_1 ADC_ENABLE_ACIN_CURRENT (not disable)
 
-  /// Enable/disable VBUS voltage ADC.
+  /// Enables/disables VBUS voltage ADC.
   adc_vbus_voltage --enable/bool=false --disable/bool=(not enable) -> none:
+    assert: not enable and disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_1 ADC_ENABLE_VBUS_VOLTAGE (not disable)
 
-  /// Enable/disable VBUS current ADC.
+  /// Enables/disables VBUS current ADC.
   adc_vbus_current --enable/bool=false --disable/bool=(not enable) -> none:
+    assert: not enable and disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_1 ADC_ENABLE_VBUS_CURRENT (not disable)
 
-  /// Enable/disable APS voltage ADC.
+  /// Enables/disables APS voltage ADC.
   adc_aps_voltage --enable/bool=false --disable/bool=(not enable) -> none:
+    assert: not enable and disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_1 ADC_ENABLE_APS_VOLTAGE (not disable)
 
-  /// Enable/disable TS pin ADC.
+  /// Enables/disables TS pin ADC.
   adc_ts_pin --enable/bool=false --disable/bool=(not enable) -> none:
+    assert: not enable and disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_1 ADC_ENABLE_TS_PIN (not disable)
 
-  /// Enable/disable internal temperature ADC.
+  /// Enables/disables internal temperature ADC.
   adc_internal_temperature --enable/bool=false --disable/bool=(not enable) -> none:
+    assert: not enable and disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_2 ADC_ENABLE_INTERNAL_TEMPERATURE (not disable)
 
-  /// Enable/disable ADC on GPIO0.
+  /// Enables/disables ADC on GPIO0.
   adc_gpio_0 --enable/bool=false --disable/bool=(not enable) -> none:
+    assert: not enable and disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_2 ADC_ENABLE_GPIO_0 (not disable)
 
-  /// Enable/disable ADC on GPIO1.
+  /// Enables/disables ADC on GPIO1.
   adc_gpio_1 --enable/bool=false --disable/bool=(not enable) -> none:
+    assert: not enable and disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_2 ADC_ENABLE_GPIO_1 (not disable)
 
-  /// Enable/disable ADC on GPIO2.
+  /// Enables/disables ADC on GPIO2.
   adc_gpio_2 --enable/bool=false --disable/bool=(not enable) -> none:
+    assert: not enable and disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_2 ADC_ENABLE_GPIO_2 (not disable)
 
-  /// Enable/disable ADC on GPIO3.
+  /// Enables/disables ADC on GPIO3.
   adc_gpio_3 --enable/bool=false --disable/bool=(not enable) -> none:
+    assert: not enable and disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_2 ADC_ENABLE_GPIO_3 (not disable)
 
   adc_control_ register/int bit/int set/bool -> none:
@@ -353,7 +381,7 @@ class Power:
     pek_parameter
       --boot_time_ms=512
       --long_press_time_ms=1000
-      --long_press_shutdown=false
+      --no-long_press_shutdown
       --pwrok_signal_delay_ms=64
       --shutdown_duration_s=4
     adc_battery_voltage --enable

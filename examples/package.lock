@@ -1,0 +1,10 @@
+prefixes:
+  axp192: axp192
+  m5stack_core2: ..
+packages:
+  ..:
+    path: ..
+    prefixes:
+      axp192: axp192
+  axp192:
+    path: ../../toit-axp192

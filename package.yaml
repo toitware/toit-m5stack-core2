@@ -1,0 +1,3 @@
+dependencies:
+  axp192:
+    path: ../toit-axp192

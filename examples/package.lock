@@ -1,10 +1,12 @@
 prefixes:
-  axp192: axp192
+  axp192: toit-axp192
   m5stack_core2: ..
 packages:
   ..:
     path: ..
     prefixes:
-      axp192: axp192
-  axp192:
-    path: ../../toit-axp192
+      axp192: toit-axp192
+  toit-axp192:
+    url: github.com/toitware/toit-axp192
+    version: 1.0.0
+    hash: f365587dd93c3ab537f2621de1b77f2473eac756

@@ -1,3 +1,4 @@
 dependencies:
   axp192:
-    path: ../toit-axp192
+    url: github.com/toitware/toit-axp192
+    version: ^1.0.0

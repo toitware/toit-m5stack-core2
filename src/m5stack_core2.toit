@@ -12,10 +12,10 @@ class Power:
   constructor --clock/gpio.Pin --data/gpio.Pin:
     bus := i2c.Bus --scl=clock --sda=data --frequency=400_000
 
-    if not bus.scan.contains 0x68:
+    if not bus.scan.contains 0x34:
       throw "AXP192 not found on I2C bus"
 
-    device = bus.device 0x68
+    device = bus.device 0x34
 
     set_defaults
 
@@ -104,8 +104,8 @@ class Power:
     else:
       clear_bits device GPIO_2_0_SIGNAL_STATUS_REGISTER GPIO_1_WRITE_OUTPUT
 
-  /// LED reset line is attached to GPIO4.  Set to 0 (pulled low) or 1 (floating with pull-up).
-  led_reset value/int -> none:
+  /// LCD reset line is attached to GPIO4.  Set to 0 (pulled low) or 1 (floating with pull-up).
+  lcd_reset value/int -> none:
     if value == 1:
       set_bits device GPIO_4_3_SIGNAL_STATUS_REGISTER GPIO_4_WRITE_OUTPUT
     else:
@@ -365,8 +365,8 @@ class Power:
     adc_aps_voltage --enable
     adc_ts_pin --enable
 
-    led_reset 0
+    lcd_reset 0
     sleep --ms=100
-    led_reset 1
+    lcd_reset 1
 
     bus_power_mode --usb_or_battery

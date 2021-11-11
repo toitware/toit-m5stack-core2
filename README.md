@@ -5,6 +5,8 @@ functionality relates to the AXP192 power control chip
 that also controls the LCD backlight and reset lines,
 and the green LED.
 
+Schematic is at https://static-cdn.m5stack.com/resource/docs/static/assets/img/product_pics/core/core2/core2_sch.webp
+
 ## Example
 
 ```

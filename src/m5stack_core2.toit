@@ -64,6 +64,8 @@ class Power:
     else: throw "Invalid current"
     set_bits device BACKUP_BATTERY_CHARGE_CONTROL_REGISTER backup_value --mask=backup_mask
 
+  exactly_one_ a/bool b/bool -> none:
+    if a != (not b): throw "BOTH_ON_AND_OFF"
 
   /**
   Enables internal charging at the given target millivolts and
@@ -74,7 +76,7 @@ class Power:
   $target_mv should be 4100mV, 4150mV, 4200mV, or 4360mV, default is 4200mV.
   */
   battery_internal_charging --off/bool=false --on/bool=(not off) --target_mv/int=4200 --ma/int=780 --end_charging_at_10_percent/bool=false --end_charging_at_15_percent/bool=false:
-    assert: off == (not on)
+    exactly_one_ on off
     set_end := end_charging_at_10_percent or end_charging_at_15_percent
     mask := CHARGE_INTERNAL_ENABLE_MASK
           | CHARGE_INTERNAL_TARGET_VOLTAGE_MASK
@@ -92,7 +94,7 @@ class Power:
 
   /// Sets GPIO 0 to either floating or grounded.
   gpio0 --floating/bool=false --grounded/bool=false -> none:
-    assert: grounded == (not floating)
+    exactly_one_ grounded floating
     if grounded:
       clear_bits device GPIO_2_0_SIGNAL_STATUS_REGISTER GPIO_0_WRITE_OUTPUT
     else:
@@ -101,7 +103,7 @@ class Power:
   /// Turns the LED on or off.
   /// The LED is switched on by pulling down the cathode with GPIO 1.
   led --off/bool=false --on/bool=(not off) -> none:
-    assert: off == (not on)
+    exactly_one_ on off
     if on:
       clear_bits device GPIO_2_0_SIGNAL_STATUS_REGISTER GPIO_1_WRITE_OUTPUT
     else:
@@ -115,14 +117,14 @@ class Power:
     if value == 1:
       set_bits device GPIO_4_3_SIGNAL_STATUS_REGISTER GPIO_4_WRITE_OUTPUT
     else:
-      assert: value == 0
+      if value != 0: throw "value must be 0 or 1"
       clear_bits device GPIO_4_3_SIGNAL_STATUS_REGISTER GPIO_4_WRITE_OUTPUT
 
   /// Switches the speaker on or off.
   /// The speaker is switched on by floating GPIO 2 and letting the pull-up do its
   ///   job.
   speaker --off/bool=false --on/bool=(not off) -> none:
-    assert: off == (not on)
+    exactly_one_ on off
     if on:
       set_bits device GPIO_2_0_SIGNAL_STATUS_REGISTER GPIO_2_WRITE_OUTPUT
     else:
@@ -130,32 +132,32 @@ class Power:
 
   // Switches power on the peripherals.
   peripherals --off/bool=false --on/bool=(not off) -> none:
-    assert: off == (not on)
+    exactly_one_ on off
     power_ POWER_OUTPUT_LDO2 on
 
   // Switches power on the vibrator.
   vibrator --off/bool=false --on/bool=(not off) -> none:
-    assert: off == (not on)
+    exactly_one_ on off
     power_ POWER_OUTPUT_LDO3 on
 
   // Switches power on DC1.
   dc_dc1 --off/bool=false --on/bool=(not off) -> none:
-    assert: off == (not on)
+    exactly_one_ on off
     power_ POWER_OUTPUT_DC_DC1 on
 
   // Switches power on DC2.
   dc_dc2 --off/bool=false --on/bool=(not off) -> none:
-    assert: off == (not on)
+    exactly_one_ on off
     power_ POWER_OUTPUT_DC_DC2 on
 
   // Switches power on the LCD backlight.
   backlight --off/bool=false --on/bool=(not off) -> none:
-    assert: off == (not on)
+    exactly_one_ on off
     power_ POWER_OUTPUT_DC_DC3 on
 
   // Switches on the 5V boost chip.
   boost_enable --off/bool=false --on/bool=(not off) -> none:
-    assert: off == (not on)
+    exactly_one_ on off
     power_ POWER_OUTPUT_EXTEN on
 
   power_ pin/int on/bool -> none:
@@ -171,7 +173,7 @@ class Power:
       --external_charging_control/bool=false
       --nmos_open_drain_output/bool=false
       --universal_input/bool=false:
-    assert: off == (not on)
+    exactly_one_ on off
     check := external_charging_control ? 1 : 0
     check += nmos_open_drain_output ? 1 : 0
     check += universal_input ? 1 : 0
@@ -191,7 +193,7 @@ class Power:
       --nmos_open_drain_output/bool=false
       --universal_input/bool=false
       --adc_input/bool=false:
-    assert: off == (not on)
+    exactly_one_ on off
     check := external_charging_control ? 1 : 0
     check += nmos_open_drain_output ? 1 : 0
     check += universal_input ? 1 : 0
@@ -254,67 +256,67 @@ class Power:
 
   /// Enables/disables battery voltage ADC.
   adc_battery_voltage --disable/bool=false --enable/bool=(not disable) -> none:
-    assert: disable == (not enable)
+    exactly_one_ enable disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_1 ADC_ENABLE_BATTERY_VOLTAGE enable
 
   /// Enables/disables battery current ADC.
   adc_battery_current --disable/bool=false --enable/bool=(not disable) -> none:
-    assert: disable == (not enable)
+    exactly_one_ enable disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_1 ADC_ENABLE_BATTERY_CURRENT enable
 
   /// Enable/disable ACIN voltage ADC.
   adc_acin_voltage --disable/bool=false --enable/bool=(not disable) -> none:
-    assert: disable == (not enable)
+    exactly_one_ enable disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_1 ADC_ENABLE_ACIN_VOLTAGE enable
 
   /// Enable/disable ACIN current ADC.
   adc_acin_current --disable/bool=false --enable/bool=(not disable) -> none:
-    assert: disable == (not enable)
+    exactly_one_ enable disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_1 ADC_ENABLE_ACIN_CURRENT enable
 
   /// Enables/disables VBUS voltage ADC.
   adc_vbus_voltage --disable/bool=false --enable/bool=(not disable) -> none:
-    assert: disable == (not enable)
+    exactly_one_ enable disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_1 ADC_ENABLE_VBUS_VOLTAGE enable
 
   /// Enables/disables VBUS current ADC.
   adc_vbus_current --disable/bool=false --enable/bool=(not disable) -> none:
-    assert: disable == (not enable)
+    exactly_one_ enable disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_1 ADC_ENABLE_VBUS_CURRENT enable
 
   /// Enables/disables APS voltage ADC.
   adc_aps_voltage --disable/bool=false --enable/bool=(not disable) -> none:
-    assert: disable == (not enable)
+    exactly_one_ enable disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_1 ADC_ENABLE_APS_VOLTAGE enable
 
   /// Enables/disables TS pin ADC.
   adc_ts_pin --disable/bool=false --enable/bool=(not disable) -> none:
-    assert: disable == (not enable)
+    exactly_one_ enable disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_1 ADC_ENABLE_TS_PIN enable
 
   /// Enables/disables internal temperature ADC.
   adc_internal_temperature --disable/bool=false --enable/bool=(not disable) -> none:
-    assert: disable == (not enable)
+    exactly_one_ enable disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_2 ADC_ENABLE_INTERNAL_TEMPERATURE enable
 
   /// Enables/disables ADC on GPIO0.
   adc_gpio_0 --disable/bool=false --enable/bool=(not disable) -> none:
-    assert: disable == (not enable)
+    exactly_one_ enable disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_2 ADC_ENABLE_GPIO_0 enable
 
   /// Enables/disables ADC on GPIO1.
   adc_gpio_1 --disable/bool=false --enable/bool=(not disable) -> none:
-    assert: disable == (not enable)
+    exactly_one_ enable disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_2 ADC_ENABLE_GPIO_1 enable
 
   /// Enables/disables ADC on GPIO2.
   adc_gpio_2 --disable/bool=false --enable/bool=(not disable) -> none:
-    assert: disable == (not enable)
+    exactly_one_ enable disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_2 ADC_ENABLE_GPIO_2 enable
 
   /// Enables/disables ADC on GPIO3.
   adc_gpio_3 --disable/bool=false --enable/bool=(not disable) -> none:
-    assert: disable == (not enable)
+    exactly_one_ enable disable
     adc_control_ ADC_ENABLE_SETTING_REGISTER_2 ADC_ENABLE_GPIO_3 enable
 
   adc_control_ register/int bit/int set/bool -> none:
@@ -330,7 +332,7 @@ class Power:
 
   /// Specify one of $usb_or_battery or $outside power modes.
   bus_power_mode --outside/bool=false --usb_or_battery=(not outside) -> none:
-    assert: outside == (not usb_or_battery)
+    exactly_one_ outside usb_or_battery
     if outside:
       boost_enable --off
       set_bits device GPIO_0_CONTROL_REGISTER GPIO_CONTROL_UNIVERSAL_INPUT_FUNCTION --mask=GPIO_CONTROL_MASK

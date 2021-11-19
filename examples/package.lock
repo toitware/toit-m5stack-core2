@@ -8,6 +8,8 @@ packages:
     path: ..
     prefixes:
       axp192: toit-axp192
+      color_tft: toit-color-tft
+      pixel_display: toit-pixel-display
   toit-axp192:
     url: github.com/toitware/toit-axp192
     version: 1.0.0

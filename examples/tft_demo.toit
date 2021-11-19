@@ -15,47 +15,6 @@ import pixel_display.texture show *
 import pixel_display.true_color show *
 import spi
 
-get_display -> TrueColorPixelDisplay:
-                                                // MHz x    y    xoff yoff sda clock cs  dc  reset backlight invert
-  M5_STACK_CORE_2_16_BIT_LANDSCAPE_SETTINGS ::= [  40, 320, 240, 0,   0,   23, 18,   5,  15, null, null,     true,  COLOR_TFT_16_BIT_MODE ]
-
-  s := M5_STACK_CORE_2_16_BIT_LANDSCAPE_SETTINGS
-
-  hz            := 1_000_000 * s[0]
-  width         := s[1]
-  height        := s[2]
-  x_offset      := s[3]
-  y_offset      := s[4]
-  mosi          := gpio.Pin s[5]
-  clock         := gpio.Pin s[6]
-  cs            := gpio.Pin s[7]
-  dc            := gpio.Pin s[8]
-  reset         := s[9] == null ? null : gpio.Pin s[9]
-  backlight     := s[10] == null ? null : gpio.Pin s[10]
-  invert_colors := s[11]
-  flags         := s[12]
-
-  bus := spi.Bus
-    --mosi=mosi
-    --clock=clock
-
-  device := bus.device
-    --cs=cs
-    --dc=dc
-    --frequency=hz
-
-  driver := ColorTft device width height
-    --reset=reset
-    --backlight=backlight
-    --x_offset=x_offset
-    --y_offset=y_offset
-    --flags=flags
-    --invert_colors=invert_colors
-
-  tft := TrueColorPixelDisplay driver
-
-  return tft
-
 main:
   clock := gpio.Pin 22
   data := gpio.Pin 21
@@ -66,7 +25,7 @@ main:
   power := m5stack_core2.Power --clock=clock --data=data
   
   // Get TFT driver.
-  tft := get_display
+  tft := m5stack_core2.display
 
   tft.background = get_rgb 0x12 0x03 0x25
   width := 320
@@ -74,13 +33,13 @@ main:
   sans := Font [sans_10.ASCII]
   sans_big := Font [sans_24_bold.ASCII]
   sans_big_context := tft.context --landscape --color=WHITE --font=sans_big
-  sans_big_red := tft.context --landscape --color=(get_rgb 0xff 0 0) --font=sans_big
+  sans_big_blue := tft.context --landscape --color=(get_rgb 0x40 0x40 0xff) --font=sans_big
   sans_context := tft.context --landscape --color=WHITE --font=sans
 
   ctr := tft.text (sans_big_context.with --alignment=TEXT_TEXTURE_ALIGN_RIGHT) 160 25 "00000"
   ctr_small := tft.text sans_context 160 25 "000"
 
-  hello := tft.text sans_big_red 50 100 "Hello, Toit!"
+  hello := tft.text sans_big_blue 80 80 "Hello, Toit!"
 
   // A red histogram stacked on a grey one, so that we can show values
   // that are too high in a different colour.
@@ -104,7 +63,7 @@ main:
     tft.draw
     next := Time.monotonic_us
     // Scale frame time by some random factor and display it on the histogram.
-    diff := (next - last) >> 10
+    diff := (next - last) / 800
     grey_histo.add diff
     red_histo.add diff - 50
     last = next

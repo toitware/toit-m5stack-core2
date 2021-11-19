@@ -2,9 +2,55 @@
 // Use of this source code is governed by an MIT-style license that can be
 // found in the LICENSE file.
 
+import axp192 show *
+import color_tft show *
 import gpio
 import i2c
-import axp192 show *
+import pixel_display
+import spi
+
+/**
+Gets the display object.  By default the display is in 16 bit mode, but
+  you can pick 24 bit mode for clearer colors and slower updates.
+The display is a 320x240 color display, normally used in landscape mode.
+You must create a $Power object before getting the display, since it
+  powers up the display and backlight in its constructor.
+*/
+display --color_depth/int=16 -> pixel_display.TrueColorPixelDisplay:
+  flags /int := ?
+  if color_depth == 16:
+    flags = COLOR_TFT_16_BIT_MODE
+  else if color_depth == 24:
+    flags = 0
+  else:
+    throw "Color depth must be 16 or 24 bits"
+
+  hz            := 40_000_000
+  width         := 320
+  height        := 240
+  mosi          := gpio.Pin 23
+  clock         := gpio.Pin 18
+  cs            := gpio.Pin 5
+  dc            := gpio.Pin 15
+
+  bus := spi.Bus
+    --mosi=mosi
+    --clock=clock
+
+  device := bus.device
+    --cs=cs
+    --dc=dc
+    --frequency=hz
+
+  driver := ColorTft device width height
+    --reset=null
+    --backlight=null
+    --flags=flags
+    --invert_colors=true
+
+  tft := pixel_display.TrueColorPixelDisplay driver
+
+  return tft
 
 class Power:
   device /i2c.Device

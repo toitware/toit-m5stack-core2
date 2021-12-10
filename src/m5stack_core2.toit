@@ -60,7 +60,7 @@ class Power:
     to its default values.  Resets the LCD display and switches
     on the LCD backlight and the green power LED.
   */
-  constructor --clock/gpio.Pin --data/gpio.Pin:
+  constructor --clock/gpio.Pin --data/gpio.Pin --bus_power_mode_outside/bool=false --bus_power_mode_usb_or_battery/bool=(not bus_power_mode_outside):
     bus := i2c.Bus --scl=clock --sda=data --frequency=400_000
 
     if not bus.scan.contains 0x34:
@@ -69,6 +69,8 @@ class Power:
     device = bus.device 0x34
 
     set_defaults
+
+    bus_power_mode --outside=bus_power_mode_outside --usb_or_battery=bus_power_mode_usb_or_battery
 
   /// Sets voltage to the ESP32.
   /// Should be between 3V and 3.4V.
@@ -448,5 +450,3 @@ class Power:
     lcd_reset 0
     sleep --ms=100
     lcd_reset 1
-
-    bus_power_mode --usb_or_battery

@@ -21,11 +21,3 @@ main:
     if coord.s:
       print "X: $coord.x Y: $coord.y"
     sleep --ms=20
-  if device.power.external_power_acin_exists:
-    print "ACIN exists"
-  if device.power.external_power_acin_usable:
-    print "ACIN usable"
-  if device.power.external_power_vbus_exists:
-    print "VBUS exists"
-  if device.power.external_power_vbus_usable:
-    print "VBUS usable"

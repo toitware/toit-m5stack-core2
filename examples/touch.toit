@@ -12,7 +12,15 @@ main:
   // on the LCD backlight and the green power LED.
   device := m5stack_core2.Device
 
-
+  touch := device.touch
+  coord := touch.get_coords
+  while true:
+    // Read FT63xx.
+    coord = touch.get_coords
+    // if touched print the coordinate.
+    if coord.s:
+      print "X: $coord.x Y: $coord.y"
+    sleep --ms=20
   if device.power.external_power_acin_exists:
     print "ACIN exists"
   if device.power.external_power_acin_usable:

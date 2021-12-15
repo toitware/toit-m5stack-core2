@@ -8,15 +8,40 @@ import gpio
 import i2c
 import pixel_display
 import spi
+import ft63xx
 
-/**
-Gets the display object.  By default the display is in 16 bit mode, but
-  you can pick 24 bit mode for clearer colors and slower updates.
-The display is a 320x240 color display, normally used in landscape mode.
-You must create a $Power object before getting the display, since it
-  powers up the display and backlight in its constructor.
-*/
-display --color_depth/int=16 -> pixel_display.TrueColorPixelDisplay:
+class Device:
+  i2c_bus/i2c.Bus
+  spi_bus/spi.Bus
+  power/Power
+
+  // Sets up spi and i2c bussses and creates the power object which
+  // initialize the power config to its default values.
+  // Resets the LCD display and switches on the LCD backlight
+  // and the green power LED.
+  constructor --i2c_bus/i2c.Bus?=null --spi_bus/spi.Bus?=null --bus_power_mode_outside/bool=false --bus_power_mode_usb_or_battery/bool=(not bus_power_mode_outside):
+    if not i2c_bus:
+      clock := gpio.Pin 22
+      data := gpio.Pin 21
+      i2c_bus = i2c.Bus --scl=clock --sda=data --frequency=400_000
+    this.i2c_bus = i2c_bus
+
+    if not spi_bus:
+      mosi := gpio.Pin 23
+      clock := gpio.Pin 18
+      spi_bus = spi.Bus --clock=clock --mosi=mosi
+    this.spi_bus = spi_bus
+
+    power = Power i2c_bus --bus_power_mode_outside=bus_power_mode_outside --bus_power_mode_usb_or_battery=bus_power_mode_usb_or_battery
+
+  display --color_depth/int=16 -> pixel_display.TrueColorPixelDisplay:
+    return display_ spi_bus --color_depth=color_depth
+
+  touch -> ft63xx.Driver:
+    return ft63xx.Driver
+      i2c_bus.device ft63xx.I2C_ADDRESS
+
+display_ bus/spi.Bus --color_depth/int=16 -> pixel_display.TrueColorPixelDisplay:
   flags /int := ?
   if color_depth == 16:
     flags = COLOR_TFT_16_BIT_MODE
@@ -28,14 +53,8 @@ display --color_depth/int=16 -> pixel_display.TrueColorPixelDisplay:
   hz            := 40_000_000
   width         := 320
   height        := 240
-  mosi          := gpio.Pin 23
-  clock         := gpio.Pin 18
   cs            := gpio.Pin 5
   dc            := gpio.Pin 15
-
-  bus := spi.Bus
-    --mosi=mosi
-    --clock=clock
 
   device := bus.device
     --cs=cs
@@ -52,6 +71,22 @@ display --color_depth/int=16 -> pixel_display.TrueColorPixelDisplay:
 
   return tft
 
+/**
+Gets the display object.  By default the display is in 16 bit mode, but
+  you can pick 24 bit mode for clearer colors and slower updates.
+The display is a 320x240 color display, normally used in landscape mode.
+You must create a $Power object before getting the display, since it
+  powers up the display and backlight in its constructor.
+*/
+display --color_depth/int=16 -> pixel_display.TrueColorPixelDisplay:
+  mosi          := gpio.Pin 23
+  clock         := gpio.Pin 18
+  bus := spi.Bus
+    --mosi=mosi
+    --clock=clock
+
+  return display_ bus --color_depth=color_depth
+
 class Power:
   device /i2c.Device
 
@@ -60,17 +95,21 @@ class Power:
     to its default values.  Resets the LCD display and switches
     on the LCD backlight and the green power LED.
   */
-  constructor --clock/gpio.Pin --data/gpio.Pin --bus_power_mode_outside/bool=false --bus_power_mode_usb_or_battery/bool=(not bus_power_mode_outside):
-    bus := i2c.Bus --scl=clock --sda=data --frequency=400_000
-
-    if not bus.scan.contains 0x34:
-      throw "AXP192 not found on I2C bus"
-
+  constructor bus/i2c.Bus --bus_power_mode_outside/bool=false --bus_power_mode_usb_or_battery/bool=(not bus_power_mode_outside):
     device = bus.device 0x34
 
     set_defaults
 
     bus_power_mode --outside=bus_power_mode_outside --usb_or_battery=bus_power_mode_usb_or_battery
+
+  /**
+  Creates the power object and initializes the power config
+    to its default values.  Resets the LCD display and switches
+    on the LCD backlight and the green power LED.
+  */
+  constructor --clock/gpio.Pin --data/gpio.Pin --bus_power_mode_outside/bool=false --bus_power_mode_usb_or_battery/bool=(not bus_power_mode_outside):
+    bus := i2c.Bus --scl=clock --sda=data --frequency=400_000
+    return Power bus --bus_power_mode_outside=bus_power_mode_outside --bus_power_mode_usb_or_battery=bus_power_mode_usb_or_battery
 
   /// Sets voltage to the ESP32.
   /// Should be between 3V and 3.4V.

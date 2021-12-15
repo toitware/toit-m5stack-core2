@@ -1,24 +1,17 @@
 prefixes:
   axp192: toit-axp192
   color_tft: toit-color-tft
-  m5stack_core2: ..
+  ft63xx: ft63xx-toit
   pixel_display: toit-pixel-display
 packages:
-  ..:
-    path: ..
-    prefixes:
-      axp192: toit-axp192
-      color_tft: toit-color-tft
-      ft63xx: ft63xx-toit
-      pixel_display: toit-pixel-display
   ft63xx-toit:
     url: github.com/imliubo/ft63xx-toit
     version: 1.0.0
     hash: b357a1e4345fe05865810da74b7ee7b4e5b4d52f
   toit-axp192:
     url: github.com/toitware/toit-axp192
-    version: 1.0.0
-    hash: f365587dd93c3ab537f2621de1b77f2473eac756
+    version: 1.0.1
+    hash: c43a495d9068a7eaf9a7664a2a451eadb2e91101
   toit-color-tft:
     url: github.com/toitware/toit-color-tft
     version: 1.2.0

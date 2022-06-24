@@ -6,8 +6,8 @@ prefixes:
 packages:
   ft63xx-toit:
     url: github.com/imliubo/ft63xx-toit
-    version: 1.0.0
-    hash: b357a1e4345fe05865810da74b7ee7b4e5b4d52f
+    version: 1.0.1
+    hash: 9dad831996a0ca70ae4398db384e5f26595b2c1a
   toit-axp192:
     url: github.com/toitware/toit-axp192
     version: 1.0.1
@@ -20,5 +20,5 @@ packages:
       pixel_display: toit-pixel-display
   toit-pixel-display:
     url: github.com/toitware/toit-pixel-display
-    version: 1.2.0
-    hash: 417f476dd90e096bde74820203277bfaec88d9ca
+    version: 1.6.0
+    hash: 39de82f680e27961e39ca24ba94520f21759370c

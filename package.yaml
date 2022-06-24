@@ -1,13 +1,13 @@
 dependencies:
   axp192:
     url: github.com/toitware/toit-axp192
-    version: ^1.0.0
+    version: ^1.0.1
   color_tft:
     url: github.com/toitware/toit-color-tft
     version: ^1.2.0
   ft63xx:
     url: github.com/imliubo/ft63xx-toit
-    version: ^1.0.0
+    version: ^1.0.1
   pixel_display:
     url: github.com/toitware/toit-pixel-display
-    version: ^1.2.0
+    version: ^1.6.0

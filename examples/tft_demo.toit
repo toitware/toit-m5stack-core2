@@ -5,8 +5,8 @@
 import bitmap show *
 import color_tft show *
 import font show *
-import font.x11_100dpi.sans.sans_10 as sans_10
-import font.x11_100dpi.sans.sans_24_bold as sans_24_bold
+import font_x11_adobe.sans_10 as sans_10
+import font_x11_adobe.sans_24_bold as sans_24_bold
 import gpio
 import m5stack_core2
 import pixel_display show *

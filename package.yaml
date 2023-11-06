@@ -1,3 +1,5 @@
+name: m5stack_core2
+description: Useful functions for the M5Stack Core2.
 dependencies:
   axp192:
     url: github.com/toitware/toit-axp192

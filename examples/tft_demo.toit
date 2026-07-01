@@ -7,7 +7,6 @@ import color_tft show *
 import font show *
 import font_x11_adobe.sans_10 as sans_10
 import font_x11_adobe.sans_24_bold as sans_24_bold
-import gpio
 import m5stack_core2
 import pixel_display show *
 import pixel_display.histogram show TrueColorHistogram

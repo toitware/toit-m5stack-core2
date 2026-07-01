@@ -4,7 +4,6 @@
 
 import m5stack_core2
 import i2c
-import gpio
 
 main:
   // This also powers on the touch circuitry, so you can see it in the I2C

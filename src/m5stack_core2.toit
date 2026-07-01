@@ -21,15 +21,11 @@ class Device:
   // and the green power LED.
   constructor --i2c_bus/i2c.Bus?=null --spi_bus/spi.Bus?=null --bus_power_mode_outside/bool=false --bus_power_mode_usb_or_battery/bool=(not bus_power_mode_outside):
     if not i2c_bus:
-      clock := gpio.Pin 22
-      data := gpio.Pin 21
-      i2c_bus = i2c.Bus --scl=clock --sda=data --frequency=400_000
+      i2c_bus = i2c.Bus --scl=22 --sda=21 --frequency=400_000
     this.i2c_bus = i2c_bus
 
     if not spi_bus:
-      mosi := gpio.Pin 23
-      clock := gpio.Pin 18
-      spi_bus = spi.Bus --clock=clock --mosi=mosi
+      spi_bus = spi.Bus --clock=18 --mosi=23
     this.spi_bus = spi_bus
 
     power = Power i2c_bus --bus_power_mode_outside=bus_power_mode_outside --bus_power_mode_usb_or_battery=bus_power_mode_usb_or_battery
@@ -53,12 +49,10 @@ display_ bus/spi.Bus --color_depth/int=16 -> pixel_display.TrueColorPixelDisplay
   hz            := 40_000_000
   width         := 320
   height        := 240
-  cs            := gpio.Pin 5
-  dc            := gpio.Pin 15
 
   device := bus.device
-    --cs=cs
-    --dc=dc
+    --cs=5
+    --dc=15
     --frequency=hz
 
   driver := ColorTft device width height
@@ -79,11 +73,9 @@ You must create a $Power object before getting the display, since it
   powers up the display and backlight in its constructor.
 */
 display --color_depth/int=16 -> pixel_display.TrueColorPixelDisplay:
-  mosi          := gpio.Pin 23
-  clock         := gpio.Pin 18
   bus := spi.Bus
-    --mosi=mosi
-    --clock=clock
+    --mosi=23
+    --clock=18
 
   return display_ bus --color_depth=color_depth
 
@@ -106,8 +98,15 @@ class Power:
   Creates the power object and initializes the power config
     to its default values.  Resets the LCD display and switches
     on the LCD backlight and the green power LED.
+
+  The $clock and $data pins are GPIO numbers. Passing a $gpio.Pin is deprecated;
+    provide the integer GPIO number instead.
   */
-  constructor --clock/gpio.Pin --data/gpio.Pin --bus_power_mode_outside/bool=false --bus_power_mode_usb_or_battery/bool=(not bus_power_mode_outside):
+  // __TYPE-MIGRATION__ clock: gpio.Pin. Deprecated. Provide an integer instead.
+  // __TYPE-MIGRATION__ clock: int
+  // __TYPE-MIGRATION__ data: gpio.Pin. Deprecated. Provide an integer instead.
+  // __TYPE-MIGRATION__ data: int
+  constructor --clock/any --data/any --bus_power_mode_outside/bool=false --bus_power_mode_usb_or_battery/bool=(not bus_power_mode_outside):
     bus := i2c.Bus --scl=clock --sda=data --frequency=400_000
     return Power bus --bus_power_mode_outside=bus_power_mode_outside --bus_power_mode_usb_or_battery=bus_power_mode_usb_or_battery
 
